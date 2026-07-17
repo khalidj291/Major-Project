@@ -1,0 +1,11 @@
+Paired t-test: best decay model (S=730) vs official baseline
+Financial domain (SPY), test period 2023-01-01 to 2024-12-31, n=501
+
+Decay MAE: 0.006142
+Baseline MAE: 0.006138
+Mean error difference: -0.000004
+
+t-statistic: -0.1261
+p-value: 0.8997
+
+NOT significant at 95% confidence (p=0.8997 >= 0.05). Cannot rule out that the improvement is due to random chance.

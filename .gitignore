@@ -1,4 +1,4 @@
-# Python
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,12 +8,19 @@ venv/
 .venv/
 env/
 
-# Data and Models
+# Secrets / environment variables
+.env
+*.env.local
+*api_key*
+*secret*
+
+# Large trained model files (binary, can bloat repo — see note below)
 *.pkl
-*.npy
-*.csv
-*.txt
 
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/

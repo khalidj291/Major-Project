@@ -9,6 +9,16 @@ from ebbinghaus import ebbinghaus_weight
 
 df = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "data_processed.csv"), parse_dates=["date"])
 
+# TEAM CONVENTION: data_processed.csv may contain multiple tickers (AAPL,
+# BTC-USD, SPY) mixed together. This script is the financial-domain (SPY)
+# pipeline, so filter to SPY before anything else touches the data. Without
+# this, the reference date and weight arrays would be computed against
+# interleaved dates/rows from different assets.
+if "ticker" in df.columns:
+    before = len(df)
+    df = df[df["ticker"] == "SPY"].reset_index(drop=True)
+    print(f"Filtered to ticker=='SPY': {before} rows -> {len(df)} rows")
+
 # Training period: 2015-2022 (matches baseline model split in the master plan)
 train_df = df[(df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
 

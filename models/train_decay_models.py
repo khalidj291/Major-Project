@@ -10,6 +10,17 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 df = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "data_processed.csv"), parse_dates=["date"])
+
+# TEAM CONVENTION: data_processed.csv may contain multiple tickers (AAPL,
+# BTC-USD, SPY) mixed together. This script is the financial-domain (SPY)
+# pipeline, so filter to SPY before anything else touches the data. Without
+# this, windowing would build input sequences from interleaved returns
+# across different assets.
+if "ticker" in df.columns:
+    before = len(df)
+    df = df[df["ticker"] == "SPY"].reset_index(drop=True)
+    print(f"Filtered to ticker=='SPY': {before} rows -> {len(df)} rows")
+
 df = df.sort_values("date").reset_index(drop=True)
 
 WINDOW = 30

@@ -1,0 +1,11 @@
+Paired t-test: fast decay (S=30) vs official baseline, VOLATILE PERIODS ONLY
+Financial domain (SPY), test period 2023-01-01 to 2024-12-31, n=44
+
+Fast decay MAE: 0.008520
+Baseline MAE: 0.008661
+Mean error difference: 0.000140
+
+t-statistic: 0.8201
+p-value: 0.4167
+
+NOT significant at 95% confidence (p=0.4167 >= 0.05). With only n=44 volatile samples, cannot rule out that fast decay's apparent advantage is due to random chance rather than a real effect.

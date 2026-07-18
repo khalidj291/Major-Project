@@ -1,0 +1,26 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Secrets / environment variables
+.env
+*.env.local
+*api_key*
+*secret*
+
+# Large trained model files (binary, can bloat repo — see note below)
+*.pkl
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor/IDE
+.vscode/
+.idea/

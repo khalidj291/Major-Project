@@ -15,7 +15,7 @@ env/
 *secret*
 
 # Large trained model files (binary, can bloat repo — see note below)
-*.pkl
+
 
 # OS generated files
 .DS_Store

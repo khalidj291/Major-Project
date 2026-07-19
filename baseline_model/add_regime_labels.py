@@ -5,11 +5,15 @@ bottom 30% = "stable", the middle 40% = "neutral".
 Output: data/data_processed.csv (with a new 'regime' column added)
         results/regime_timeline.png
 """
+
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
-def add_regime_labels(processed_path="data/data_processed.csv", ticker=None):
+def add_regime_labels(processed_path=os.path.join(PROJECT_ROOT, "data", "data_processed.csv"), ticker=None):
     df = pd.read_csv(processed_path, parse_dates=["date"])
     if "ticker" in df.columns and ticker:
         mask = df["ticker"] == ticker
@@ -62,7 +66,7 @@ def add_regime_labels(processed_path="data/data_processed.csv", ticker=None):
     ax.set_xlabel("Date"); ax.set_ylabel("Close price")
     ax.legend()
     plt.tight_layout()
-    plt.savefig("results/regime_timeline.png", dpi=120)
+    plt.savefig(os.path.join(SCRIPT_DIR, "results", "regime_timeline.png"), dpi=120)
     print("\nSaved: results/regime_timeline.png")
 
     return sub

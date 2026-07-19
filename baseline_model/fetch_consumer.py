@@ -3,6 +3,10 @@ Person 1 - Day 2, Step 1: Pull real US Personal Consumption Expenditure (PCE) da
 Uses FRED's direct CSV download link -- no API key/signup needed.
 Output: data/data_consumer.csv (date, close, volume, returns)
 """
+
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 import pandas as pd
 
 FRED_URL = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=PCE"
@@ -18,7 +22,7 @@ def fetch_and_clean_consumer_data():
     df = df.dropna(subset=["returns"]).reset_index(drop=True)
 
     df = df[["date", "close", "volume", "returns"]]
-    df.to_csv("data/data_consumer.csv", index=False)
+    df.to_csv(os.path.join(PROJECT_ROOT, "data", "data_consumer.csv"), index=False)
 
     print(f"Saved data/data_consumer.csv -- {len(df)} rows")
     print(df.head())

@@ -50,7 +50,7 @@ for S in all_S_values:
     print(f"S={S:>4} | MAE: {mae:.6f}")
 
 results_df = pd.DataFrame(results)
-results_df.to_csv(os.path.join(PROJECT_ROOT, "results", "decay_rate_sensitivity.csv"), index=False)
+results_df.to_csv(os.path.join(PROJECT_ROOT, "decay_model", "results", "decay_rate_sensitivity.csv"), index=False)
 
 best_row = results_df.loc[results_df["MAE"].idxmin()]
 print(f"\nBest S value: {best_row['S']} (MAE: {best_row['MAE']:.6f})")
@@ -66,6 +66,6 @@ plt.title("Decay Rate Sensitivity — Financial Domain")
 plt.legend()
 plt.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(os.path.join(PROJECT_ROOT, "results", "decay_rate_sensitivity.png"), dpi=150)
+plt.savefig(os.path.join(PROJECT_ROOT, "decay_model", "results", "decay_rate_sensitivity.png"), dpi=150)
 print("Saved results/decay_rate_sensitivity.png")
 print("Saved results/decay_rate_sensitivity.csv")

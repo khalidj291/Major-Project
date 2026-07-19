@@ -20,17 +20,20 @@ import pickle
 import numpy as np
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+BASELINE_MODELS_DIR = os.path.join(PROJECT_ROOT, "baseline_model", "models")
+DECAY_MODELS_DIR = os.path.join(PROJECT_ROOT, "decay_model", "models")
 
-# name -> (filename, expected n_features_in_)
+# name -> (directory, filename, expected n_features_in_)
 MODELS = {
-    "baseline":              ("model_baseline.pkl", 30),
-    "decay_fast":             ("model_decay_fast.pkl", 30),
-    "decay_medium":           ("model_decay_medium.pkl", 30),
-    "decay_slow":             ("model_decay_slow.pkl", 30),
-    "baseline_consumer":      ("model_baseline_consumer.pkl", 12),
-    "decay_fast_consumer":    ("model_decay_fast_consumer.pkl", 12),
-    "decay_medium_consumer":  ("model_decay_medium_consumer.pkl", 12),
-    "decay_slow_consumer":    ("model_decay_slow_consumer.pkl", 12),
+    "baseline":               (BASELINE_MODELS_DIR, "model_baseline.pkl", 30),
+    "decay_fast":              (DECAY_MODELS_DIR, "model_decay_fast.pkl", 30),
+    "decay_medium":            (DECAY_MODELS_DIR, "model_decay_medium.pkl", 30),
+    "decay_slow":              (DECAY_MODELS_DIR, "model_decay_slow.pkl", 30),
+    "baseline_consumer":       (BASELINE_MODELS_DIR, "model_baseline_consumer.pkl", 12),
+    "decay_fast_consumer":     (DECAY_MODELS_DIR, "model_decay_fast_consumer.pkl", 12),
+    "decay_medium_consumer":   (DECAY_MODELS_DIR, "model_decay_medium_consumer.pkl", 12),
+    "decay_slow_consumer":     (DECAY_MODELS_DIR, "model_decay_slow_consumer.pkl", 12),
 }
 
 EXPECTED_PREDICT_SHAPE = (10,)  # for dummy input of 10 samples
@@ -39,8 +42,8 @@ EXPECTED_PREDICT_SHAPE = (10,)  # for dummy input of 10 samples
 def run_checks():
     failures = []
 
-    for name, (filename, n_features) in MODELS.items():
-        path = os.path.join(SCRIPT_DIR, filename)
+    for name, (model_dir, filename, n_features) in MODELS.items():
+        path = os.path.join(model_dir, filename)
 
         # 1. File exists
         if not os.path.exists(path):

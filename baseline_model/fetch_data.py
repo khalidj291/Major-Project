@@ -6,6 +6,10 @@ Output: data/data_raw.csv  (date, ticker, close, volume)
 This replaces the synthetic placeholder Claude generated to test the pipeline —
 everything downstream (clean_features.py, train_baseline.py) works unchanged.
 """
+
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 import yfinance as yf
 import pandas as pd
 
@@ -25,7 +29,7 @@ def fetch_all():
         print(f"  {len(df)} rows")
 
     raw = pd.concat(frames, ignore_index=True)[["date", "ticker", "close", "volume"]]
-    raw.to_csv("data/data_raw.csv", index=False)
+    raw.to_csv(os.path.join(PROJECT_ROOT, "data", "data_raw.csv"), index=False)
     print(f"\nSaved data/data_raw.csv — {len(raw)} total rows")
     print(raw.head())
     return raw

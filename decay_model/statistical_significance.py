@@ -44,7 +44,7 @@ best_decay_model.fit(X_train, y_train, sample_weight=weights)
 decay_preds = best_decay_model.predict(X_test)
 
 # Official baseline
-with open(os.path.join(SCRIPT_DIR, "model_baseline.pkl"), "rb") as f:
+with open(os.path.join(PROJECT_ROOT, "baseline_model", "models", "model_baseline.pkl"), "rb") as f:
     baseline_model = pickle.load(f)
 baseline_preds = baseline_model.predict(X_test)
 
@@ -73,7 +73,7 @@ else:
     conclusion = f"NOT significant at 95% confidence (p={p_value:.4f} >= {alpha}). Cannot rule out that the improvement is due to random chance."
 print(conclusion)
 
-with open(os.path.join(PROJECT_ROOT, "results", "statistical_significance.txt"), "w") as f:
+with open(os.path.join(PROJECT_ROOT, "decay_model", "results", "statistical_significance.txt"), "w") as f:
     f.write(f"Paired t-test: best decay model (S={BEST_S}) vs official baseline\n")
     f.write(f"Financial domain (SPY), test period 2023-01-01 to 2024-12-31, n={len(y_test)}\n\n")
     f.write(f"Decay MAE: {decay_errors.mean():.6f}\n")

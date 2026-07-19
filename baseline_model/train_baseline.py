@@ -8,6 +8,10 @@ This matters: stock returns are close to random noise, so if Ridge barely
 beats "predict no change", that's a real finding worth reporting honestly —
 not a bug in your code.
 """
+
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 import pandas as pd
 import numpy as np
 import pickle
@@ -28,7 +32,7 @@ def make_windowed_features(returns: pd.Series, window=WINDOW):
         idx.append(i)
     return np.array(X), np.array(y), idx
 
-def train_baseline(processed_path="data/data_processed.csv", ticker="SPY"):
+def train_baseline(processed_path=os.path.join(PROJECT_ROOT, "data", "data_processed.csv"), ticker="SPY"):
     df = pd.read_csv(processed_path, parse_dates=["date"])
     df = df[df["ticker"] == ticker].sort_values("date").reset_index(drop=True)
 
@@ -68,7 +72,7 @@ def train_baseline(processed_path="data/data_processed.csv", ticker="SPY"):
         print("consider it a benchmark decay-weighting needs to clear too.")
 
     # Save model
-    with open("models/model_baseline.pkl", "wb") as f:
+    with open(os.path.join(SCRIPT_DIR, "models", "model_baseline.pkl"), "wb") as f:
         pickle.dump(model, f)
 
     # Save results row for the team
@@ -77,7 +81,7 @@ def train_baseline(processed_path="data/data_processed.csv", ticker="SPY"):
         "train_period": f"2015-01-01 to {TRAIN_END}",
         "test_period": f"{test_dates.min()} to {test_dates.max()}",
         "MAE": mae, "RMSE": rmse, "naive_MAE": naive_mae, "naive_RMSE": naive_rmse,
-    }]).to_csv("results/baseline_results.csv", index=False)
+    }]).to_csv(os.path.join(SCRIPT_DIR, "results", "baseline_results.csv"), index=False)
 
     # Plot: actual vs Ridge vs naive, first 150 test days for readability
     n_show = 150
@@ -88,7 +92,7 @@ def train_baseline(processed_path="data/data_processed.csv", ticker="SPY"):
     plt.title(f"Baseline Ridge Regression — {ticker} next-day return (test set, first {n_show} days)")
     plt.xlabel("Date"); plt.ylabel("Daily return")
     plt.legend(); plt.xticks(rotation=45); plt.tight_layout()
-    plt.savefig("results/baseline_predictions.png", dpi=120)
+    plt.savefig(os.path.join(SCRIPT_DIR, "results", "baseline_predictions.png"), dpi=120)
     print("\nSaved: models/model_baseline.pkl, results/baseline_predictions.png, results/baseline_results.csv")
 
     return model, mae, rmse

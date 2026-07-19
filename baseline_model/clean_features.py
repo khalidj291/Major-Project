@@ -3,9 +3,13 @@ Person 1 - Day 1, Step 3: Clean data_raw.csv and engineer the returns column.
 Input:  data/data_raw.csv       (date, ticker, close, volume)
 Output: data/data_processed.csv (date, ticker, close, volume, returns)
 """
+
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 import pandas as pd
 
-def clean_and_engineer(raw_path="data/data_raw.csv", out_path="data/data_processed.csv"):
+def clean_and_engineer(raw_path=os.path.join(PROJECT_ROOT, "data", "data_raw.csv"), out_path=os.path.join(PROJECT_ROOT, "data", "data_processed.csv")):
     df = pd.read_csv(raw_path, parse_dates=["date"])
 
     # Drop rows with missing close/volume

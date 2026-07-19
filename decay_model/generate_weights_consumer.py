@@ -37,7 +37,7 @@ S_values = {"fast": 30, "medium": 365, "slow": 730}
 
 for name, S in S_values.items():
     weights = ebbinghaus_weight(train_df["date"], reference_date, S)
-    out_path = os.path.join(SCRIPT_DIR, f"weights_{name}_consumer.npy")
+    out_path = os.path.join(PROJECT_ROOT, "decay_model", "models", f"weights_{name}_consumer.npy")
     np.save(out_path, weights)
     print(f"\n{name} (S={S}) -> saved to weights_{name}_consumer.npy")
     print(f"  First 5 (oldest, 2015): {weights[:5]}")

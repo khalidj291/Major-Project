@@ -18,10 +18,10 @@ def load_models():
     """Load all four models. Decay models are placeholders until Person 2 shares them."""
     models = {}
     for name, path in [
-        ("baseline", "models/model_baseline.pkl"),
-        ("decay_fast", "models/model_decay_fast.pkl"),
-        ("decay_medium", "models/model_decay_medium.pkl"),
-        ("decay_slow", "models/model_decay_slow.pkl"),
+        ("baseline", "baseline_model/models/model_baseline.pkl"),
+        ("decay_fast", "decay_model/models/model_decay_fast.pkl"),
+        ("decay_medium", "decay_model/models/model_decay_medium.pkl"),
+        ("decay_slow", "decay_model/models/model_decay_slow.pkl"),
     ]:
         if os.path.exists(path):
             with open(path, "rb") as f:
@@ -58,7 +58,8 @@ def main():
     print(f"\nModels loaded: {[k for k,v in models.items() if v is not None]}")
 
     # TODO Day 5: build real test-set features (30-day window) and call run_all_models()
-    # TODO Day 5: save results to results/comparison_predictions.csv
+    # TODO Day 5: save results to decay_model/results/comparison_predictions.csv
+    #             (grouped with the other combined baseline-vs-decay comparison outputs)
     # TODO Day 5: call launch_dashboard()
 
     print("\nSkeleton run complete. Fill in TODOs on Day 5 once all models exist.")

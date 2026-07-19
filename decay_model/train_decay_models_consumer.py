@@ -49,9 +49,9 @@ print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")
 print(f"X_test shape: {X_test.shape}, y_test shape: {y_test.shape}")
 
 weight_files = {
-    "fast": os.path.join(SCRIPT_DIR, "weights_fast_consumer.npy"),
-    "medium": os.path.join(SCRIPT_DIR, "weights_medium_consumer.npy"),
-    "slow": os.path.join(SCRIPT_DIR, "weights_slow_consumer.npy"),
+    "fast": os.path.join(PROJECT_ROOT, "decay_model", "models", "weights_fast_consumer.npy"),
+    "medium": os.path.join(PROJECT_ROOT, "decay_model", "models", "weights_medium_consumer.npy"),
+    "slow": os.path.join(PROJECT_ROOT, "decay_model", "models", "weights_slow_consumer.npy"),
 }
 
 train_dates_full = train_df["date"].values
@@ -67,8 +67,8 @@ for name, path in weight_files.items():
     weights_aligned[name] = aligned
 
 # --- Baseline: load Person 1's OFFICIAL consumer baseline ---
-OFFICIAL_BASELINE_PATH = os.path.join(SCRIPT_DIR, "model_baseline_consumer.pkl")
-PLACEHOLDER_BASELINE_PATH = os.path.join(SCRIPT_DIR, "model_baseline_consumer_PLACEHOLDER.pkl")
+OFFICIAL_BASELINE_PATH = os.path.join(PROJECT_ROOT, "baseline_model", "models", "model_baseline_consumer.pkl")
+PLACEHOLDER_BASELINE_PATH = os.path.join(PROJECT_ROOT, "baseline_model", "models", "model_baseline_consumer_PLACEHOLDER.pkl")
 
 if os.path.exists(OFFICIAL_BASELINE_PATH):
     with open(OFFICIAL_BASELINE_PATH, "rb") as f:
@@ -88,7 +88,7 @@ for name, S in [("fast", 30), ("medium", 365), ("slow", 730)]:
     model = Ridge(alpha=1.0)
     model.fit(X_train, y_train, sample_weight=weights_aligned[name])
     decay_models[name] = model
-    with open(os.path.join(SCRIPT_DIR, f"model_decay_{name}_consumer.pkl"), "wb") as f:
+    with open(os.path.join(PROJECT_ROOT, "decay_model", "models", f"model_decay_{name}_consumer.pkl"), "wb") as f:
         pickle.dump(model, f)
 
 # --- Reality-check baseline: predict zero every time ---
@@ -128,10 +128,10 @@ plt.title("Consumer Domain: Model Predictions vs Actual")
 plt.legend()
 plt.grid(alpha=0.3)
 plt.tight_layout()
-plt.savefig(os.path.join(PROJECT_ROOT, "results", "consumer_comparison.png"), dpi=150)
+plt.savefig(os.path.join(PROJECT_ROOT, "decay_model", "results", "consumer_comparison.png"), dpi=150)
 print("\nSaved results/consumer_comparison.png")
 
 import json
-with open(os.path.join(PROJECT_ROOT, "results", "day2_consumer_mae_summary.json"), "w") as f:
+with open(os.path.join(PROJECT_ROOT, "decay_model", "results", "day2_consumer_mae_summary.json"), "w") as f:
     json.dump(results, f, indent=2)
 print("Saved results/day2_consumer_mae_summary.json")

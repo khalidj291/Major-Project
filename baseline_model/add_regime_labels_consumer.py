@@ -6,12 +6,16 @@ This matches the 12-period window already used in train_baseline_consumer.py.
 Output: data/data_consumer.csv (with new 'regime' column added)
         results/regime_timeline_consumer.png
 """
+
+import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 import pandas as pd
 import matplotlib.pyplot as plt
 
 WINDOW = 12
 
-def add_consumer_regime_labels(path="data/data_consumer.csv"):
+def add_consumer_regime_labels(path=os.path.join(PROJECT_ROOT, "data", "data_consumer.csv")):
     df = pd.read_csv(path, parse_dates=["date"]).sort_values("date").reset_index(drop=True)
     df["rolling_vol"] = df["returns"].rolling(window=WINDOW).std()
 
@@ -43,7 +47,7 @@ def add_consumer_regime_labels(path="data/data_consumer.csv"):
     ax.set_title("Consumer Spending (PCE) with Regime Overlay (12-month window)")
     ax.set_xlabel("Date"); ax.set_ylabel("PCE value")
     ax.legend(); plt.xticks(rotation=45); plt.tight_layout()
-    plt.savefig("results/regime_timeline_consumer.png", dpi=120)
+    plt.savefig(os.path.join(SCRIPT_DIR, "results", "regime_timeline_consumer.png"), dpi=120)
     print("\nSaved: results/regime_timeline_consumer.png")
     return df
 

@@ -1,7 +1,7 @@
 """
 Person 1 - Day 3, Step 1: Verify everything loads correctly before integration.
-Run this any time you're not sure something is broken -- it checks your own
-files. Person 2's model files get added to this same script once he shares them.
+Run this any time you're not sure something is broken -- it checks both
+baseline_model/ and decay_model/ outputs, all 8 models.
 """
 import pandas as pd
 import pickle
@@ -35,31 +35,45 @@ def verify_setup():
     else:
         all_ok &= check("data_consumer.csv exists", False)
 
-    # --- model_baseline.pkl ---
-    if os.path.exists("models/model_baseline.pkl"):
-        with open("models/model_baseline.pkl", "rb") as f:
-            model = pickle.load(f)
-        test_input = [[0.001] * 30]
-        try:
-            pred = model.predict(test_input)
-            all_ok &= check("model_baseline.pkl loads and predicts", pred.shape == (1,))
-        except Exception as e:
-            all_ok &= check(f"model_baseline.pkl predict failed: {e}", False)
-    else:
-        all_ok &= check("model_baseline.pkl exists", False)
+    # --- baseline_model/models/*.pkl ---
+    baseline_checks = [
+        ("baseline_model/models/model_baseline.pkl", 30),
+        ("baseline_model/models/model_baseline_consumer.pkl", 12),
+    ]
+    for path, n_features in baseline_checks:
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                model = pickle.load(f)
+            test_input = [[0.001] * n_features]
+            try:
+                pred = model.predict(test_input)
+                all_ok &= check(f"{path} loads and predicts", pred.shape == (1,))
+            except Exception as e:
+                all_ok &= check(f"{path} predict failed: {e}", False)
+        else:
+            all_ok &= check(f"{path} exists", False)
 
-    # --- model_baseline_consumer.pkl ---
-    if os.path.exists("models/model_baseline_consumer.pkl"):
-        with open("models/model_baseline_consumer.pkl", "rb") as f:
-            model_c = pickle.load(f)
-        test_input = [[0.001] * 12]  # 12-period window, not 30, for consumer data
-        try:
-            pred = model_c.predict(test_input)
-            all_ok &= check("model_baseline_consumer.pkl loads and predicts", pred.shape == (1,))
-        except Exception as e:
-            all_ok &= check(f"model_baseline_consumer.pkl predict failed: {e}", False)
-    else:
-        all_ok &= check("model_baseline_consumer.pkl exists", False)
+    # --- decay_model/models/*.pkl ---
+    decay_checks = [
+        ("decay_model/models/model_decay_fast.pkl", 30),
+        ("decay_model/models/model_decay_medium.pkl", 30),
+        ("decay_model/models/model_decay_slow.pkl", 30),
+        ("decay_model/models/model_decay_fast_consumer.pkl", 12),
+        ("decay_model/models/model_decay_medium_consumer.pkl", 12),
+        ("decay_model/models/model_decay_slow_consumer.pkl", 12),
+    ]
+    for path, n_features in decay_checks:
+        if os.path.exists(path):
+            with open(path, "rb") as f:
+                model = pickle.load(f)
+            test_input = [[0.001] * n_features]
+            try:
+                pred = model.predict(test_input)
+                all_ok &= check(f"{path} loads and predicts", pred.shape == (1,))
+            except Exception as e:
+                all_ok &= check(f"{path} predict failed: {e}", False)
+        else:
+            all_ok &= check(f"{path} exists", False)
 
     print(f"\n{'ALL CHECKS PASSED' if all_ok else 'SOME CHECKS FAILED -- fix before Day 5'}")
     return all_ok

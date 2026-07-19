@@ -52,7 +52,7 @@ fast_model.fit(X_train, y_train, sample_weight=weights)
 fast_preds_vol = fast_model.predict(X_test_vol)
 
 # Official baseline
-with open(os.path.join(SCRIPT_DIR, "model_baseline.pkl"), "rb") as f:
+with open(os.path.join(PROJECT_ROOT, "baseline_model", "models", "model_baseline.pkl"), "rb") as f:
     baseline_model = pickle.load(f)
 baseline_preds_vol = baseline_model.predict(X_test_vol)
 
@@ -78,7 +78,7 @@ else:
                    f"advantage is due to random chance rather than a real effect.")
 print(f"\n{conclusion}")
 
-with open(os.path.join(PROJECT_ROOT, "results", "statistical_significance_volatile.txt"), "w") as f:
+with open(os.path.join(PROJECT_ROOT, "decay_model", "results", "statistical_significance_volatile.txt"), "w") as f:
     f.write(f"Paired t-test: fast decay (S=30) vs official baseline, VOLATILE PERIODS ONLY\n")
     f.write(f"Financial domain (SPY), test period 2023-01-01 to 2024-12-31, n={n_volatile}\n\n")
     f.write(f"Fast decay MAE: {fast_errors.mean():.6f}\n")

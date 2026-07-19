@@ -22,13 +22,13 @@ def make_windows(full_df, start_date, end_date, window):
     dates = full_df["date"].values
     regimes = full_df["regime"].values
     X, y, sample_dates, sample_regimes = [], [], [], []
-    for i in range(window, len(returns) - 1):
-        target_date = dates[i + 1]
+    for i in range(window, len(returns)):
+        target_date = dates[i]
         if start_date <= pd.Timestamp(target_date) <= end_date:
             X.append(returns[i - window:i])
-            y.append(returns[i + 1])
+            y.append(returns[i])
             sample_dates.append(dates[i])
-            sample_regimes.append(regimes[i + 1])
+            sample_regimes.append(regimes[i])
     return np.array(X), np.array(y).reshape(-1, 1), np.array(sample_dates), np.array(sample_regimes)
 
 

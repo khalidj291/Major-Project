@@ -11,35 +11,20 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.append(SCRIPT_DIR)
 from ebbinghaus import ebbinghaus_weight
 from regime_eval import evaluate_by_regime
+from windowing import make_windows  # shared across all decay_model scripts -- see windowing.py
 
 # Load regime-labeled data (same prices as data_processed.csv, confirmed identical,
 # just with 'regime' and 'rolling_vol' columns added by Person 1)
+# Already SPY-only (no 'ticker' column) -- see add_regime_labels.py -- so ticker=None below.
 df = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "data_regime.csv"), parse_dates=["date"])
 df = df.sort_values("date").reset_index(drop=True)
 WINDOW = 30
 
-
-def make_windows(full_df, start_date, end_date, window):
-    full_df = full_df.sort_values("date").reset_index(drop=True)
-    returns = full_df["returns"].values
-    dates = full_df["date"].values
-    regimes = full_df["regime"].values
-    X, y, sample_dates, sample_regimes = [], [], [], []
-    for i in range(window, len(returns)):
-        target_date = dates[i]
-        if start_date <= pd.Timestamp(target_date) <= end_date:
-            X.append(returns[i - window:i])
-            y.append(returns[i])
-            sample_dates.append(dates[i])
-            sample_regimes.append(regimes[i])  # regime of the day being PREDICTED
-    return np.array(X), np.array(y).reshape(-1, 1), np.array(sample_dates), np.array(sample_regimes)
-
-
 train_df = df[(df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
 reference_date = train_df["date"].max()
 
-X_train, y_train, train_sample_dates, _ = make_windows(df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW)
-X_test, y_test, test_sample_dates, test_regimes = make_windows(df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW)
+X_train, y_train, train_sample_dates, _ = make_windows(df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW, track_regime=True)
+X_test, y_test, test_sample_dates, test_regimes = make_windows(df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW, track_regime=True)
 
 print(f"Test set size: {len(X_test)}")
 print(f"Test regime breakdown: {pd.Series(test_regimes).value_counts().to_dict()}")

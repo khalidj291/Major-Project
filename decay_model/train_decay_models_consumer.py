@@ -8,6 +8,9 @@ import pickle
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+import sys
+sys.path.append(SCRIPT_DIR)
+from windowing import make_windows  # shared across all decay_model scripts -- see windowing.py
 
 df = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "data_consumer.csv"), parse_dates=["date"])
 df = df.sort_values("date").reset_index(drop=True)
@@ -16,32 +19,13 @@ WINDOW = 12  # months -- NOT 30. Consumer data is monthly with only ~120 rows to
              # a 30-period window would leave too few examples to train on.
              # Matches Person 1's baseline window so comparisons are apples-to-apples.
 
-def make_windows_from_range(full_df, start_date, end_date, window):
-    """
-    Build windows where the TARGET (y) date falls within [start_date, end_date],
-    but the input window is allowed to reach back into earlier rows (e.g. into
-    the training period, for the first few test-period targets). This avoids
-    losing test samples just because they're near the start of the test period.
-    """
-    full_df = full_df.sort_values("date").reset_index(drop=True)
-    returns = full_df["returns"].values
-    dates = full_df["date"].values
-
-    X, y, sample_dates = [], [], []
-    for i in range(window, len(returns)):
-        target_date = dates[i]
-        if start_date <= pd.Timestamp(target_date) <= end_date:
-            X.append(returns[i - window:i])
-            y.append(returns[i])
-            sample_dates.append(dates[i])
-    return np.array(X), np.array(y).reshape(-1, 1), np.array(sample_dates)
-
+# No ticker column here -- data_consumer.csv is already single-series (PCE), so ticker=None.
 train_df = df[(df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
 
-X_train, y_train, train_sample_dates = make_windows_from_range(
+X_train, y_train, train_sample_dates = make_windows(
     df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW
 )
-X_test, y_test, test_sample_dates = make_windows_from_range(
+X_test, y_test, test_sample_dates = make_windows(
     df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW
 )
 

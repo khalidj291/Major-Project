@@ -8,50 +8,24 @@ import pickle
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+import sys
+sys.path.append(SCRIPT_DIR)
+from windowing import make_windows  # shared across all decay_model scripts -- see windowing.py
 
 df = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "data_processed.csv"), parse_dates=["date"])
-
-# TEAM CONVENTION: data_processed.csv may contain multiple tickers (AAPL,
-# BTC-USD, SPY) mixed together. This script is the financial-domain (SPY)
-# pipeline, so filter to SPY before anything else touches the data. Without
-# this, windowing would build input sequences from interleaved returns
-# across different assets.
-if "ticker" in df.columns:
-    before = len(df)
-    df = df[df["ticker"] == "SPY"].reset_index(drop=True)
-    print(f"Filtered to ticker=='SPY': {before} rows -> {len(df)} rows")
-
 df = df.sort_values("date").reset_index(drop=True)
 
 WINDOW = 30
 
-def make_windows(full_df, start_date, end_date, window):
-    """
-    Build windows where the TARGET (y) date falls within [start_date, end_date],
-    but the input window can reach back into earlier rows (e.g. into the training
-    period, for the first few test-period targets). This matches the convention
-    used in the consumer-domain script, and avoids wasting valid test samples
-    just because they're near the start of the test period.
-    """
-    full_df = full_df.sort_values("date").reset_index(drop=True)
-    returns = full_df["returns"].values
-    dates = full_df["date"].values
-    X, y, sample_dates = [], [], []
-    for i in range(window, len(returns)):
-        target_date = dates[i]
-        if start_date <= pd.Timestamp(target_date) <= end_date:
-            X.append(returns[i - window:i])
-            y.append(returns[i])
-            sample_dates.append(dates[i])
-    return np.array(X), np.array(y).reshape(-1, 1), np.array(sample_dates)
-
-train_df = df[(df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
+# data_processed.csv is multi-ticker (AAPL/BTC-USD/SPY) by design.
+# ticker="SPY" below filters to just this asset before any windowing happens.
+train_df = df[(df["ticker"] == "SPY") & (df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
 
 X_train, y_train, train_sample_dates = make_windows(
-    df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW
+    df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW, ticker="SPY"
 )
 X_test, y_test, test_sample_dates = make_windows(
-    df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW
+    df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW, ticker="SPY"
 )
 
 print(f"X_train shape: {X_train.shape}, y_train shape: {y_train.shape}")

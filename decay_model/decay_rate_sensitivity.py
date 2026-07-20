@@ -10,31 +10,19 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 sys.path.append(SCRIPT_DIR)
 from ebbinghaus import ebbinghaus_weight
+from windowing import make_windows  # shared across all decay_model scripts -- see windowing.py
 
 df = pd.read_csv(os.path.join(PROJECT_ROOT, "data", "data_processed.csv"), parse_dates=["date"])
 df = df.sort_values("date").reset_index(drop=True)
 WINDOW = 30
 
-
-def make_windows(full_df, start_date, end_date, window):
-    full_df = full_df.sort_values("date").reset_index(drop=True)
-    returns = full_df["returns"].values
-    dates = full_df["date"].values
-    X, y, sample_dates = [], [], []
-    for i in range(window, len(returns)):
-        target_date = dates[i]
-        if start_date <= pd.Timestamp(target_date) <= end_date:
-            X.append(returns[i - window:i])
-            y.append(returns[i])
-            sample_dates.append(dates[i])
-    return np.array(X), np.array(y).reshape(-1, 1), np.array(sample_dates)
-
-
-train_df = df[(df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
+# data_processed.csv is multi-ticker (AAPL/BTC-USD/SPY) by design --
+# ticker="SPY" filters to just this asset before windowing.
+train_df = df[(df["ticker"] == "SPY") & (df["date"] >= "2015-01-01") & (df["date"] <= "2022-12-31")].reset_index(drop=True)
 reference_date = train_df["date"].max()
 
-X_train, y_train, train_sample_dates = make_windows(df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW)
-X_test, y_test, _ = make_windows(df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW)
+X_train, y_train, train_sample_dates = make_windows(df, pd.Timestamp("2015-01-01"), pd.Timestamp("2022-12-31"), WINDOW, ticker="SPY")
+X_test, y_test, _ = make_windows(df, pd.Timestamp("2023-01-01"), pd.Timestamp("2024-12-31"), WINDOW, ticker="SPY")
 
 # Original three + five additional decay rates requested by the role doc
 all_S_values = [14, 30, 60, 90, 180, 270, 365, 730]

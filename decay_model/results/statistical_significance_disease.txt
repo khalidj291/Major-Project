@@ -1,0 +1,18 @@
+Disease domain (US COVID cases) -- honest train/validation/test split
+S selected using validation data ONLY (n=228), never the test set
+Selected S: 180
+
+Held-out test set (n=341), touched exactly once:
+  naive_zero MAE: 0.038763
+  baseline MAE:   0.045980
+  decay(S=180) MAE: 0.040868
+
+Paired t-test: t=6.6232, p=0.0000
+SIGNIFICANT at 95% confidence.
+
+Honest caveat: decay beats baseline decisively here, but neither baseline
+nor decay beats naive-zero. Baseline is trained on 2020-2022, a period with
+reporting-artifact swings far larger than the 2022-2023 test period (see
+data_documentation.md) -- decay weighting helps specifically by down-weighting
+that unrepresentative early data, not by making genuinely better predictions
+than the trivial 'no change' forecast.

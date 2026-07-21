@@ -1,0 +1,15 @@
+model,ticker,n_test_samples,mae,rmse,pct_within_10pct
+model_baseline,SPY,501,0.006138,0.008094,1.0
+model_baseline,SPY,501,0.006138,0.008094,1.0
+model_baseline,SPY,501,0.006138,0.008094,1.0
+model_decay_fast,SPY,501,0.006275,0.008195,0.6
+model_decay_medium,SPY,501,0.006213,0.008145,0.4
+model_decay_slow,SPY,501,0.006174,0.008116,0.0
+model_baseline,SPY,501,0.006138,0.008094,1.0
+model_decay_fast,SPY,501,0.006275,0.008195,0.6
+model_decay_medium,SPY,501,0.006213,0.008145,0.4
+model_decay_slow,SPY,501,0.006174,0.008116,0.0
+model_baseline,SPY,501,0.006138,0.008094,1.0
+model_decay_fast,SPY,501,0.006275,0.008195,0.6
+model_decay_medium,SPY,501,0.006213,0.008145,0.4
+model_decay_slow,SPY,501,0.006174,0.008116,0.0

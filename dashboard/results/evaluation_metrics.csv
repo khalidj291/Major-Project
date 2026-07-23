@@ -1,0 +1,2 @@
+model,ticker,n_test_samples,mae,rmse,pct_within_10pct
+model_baseline,SPY,501,0.006154,0.008099,1.2

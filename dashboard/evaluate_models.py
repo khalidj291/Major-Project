@@ -19,7 +19,7 @@ import numpy as np
 import pandas as pd
 
 DATA_PATH = "data/data_processed.csv"
-RESULTS_PATH = "results/evaluation_metrics.csv"
+RESULTS_PATH = "dashboard/results/evaluation_metrics.csv"  # was "results/evaluation_metrics.csv" -- no such folder at project root; other Person 3 outputs live under dashboard/results/
 WINDOW = 30  # 30 days of returns as features, per the data format contract
 TEST_START = "2023-01-01"
 DEFAULT_TICKER = "SPY"  # data_processed.csv holds multiple tickers stacked together
@@ -46,10 +46,10 @@ def build_features(df, window=WINDOW):
     returns = df["returns"].values
     dates = df["date"].values
     X, y, sample_dates = [], [], []
-    for i in range(window, len(returns) - 1):
+    for i in range(window, len(returns)):
         X.append(returns[i - window:i])
-        y.append(returns[i + 1])
-        sample_dates.append(dates[i + 1])
+        y.append(returns[i])
+        sample_dates.append(dates[i])
     X = np.array(X)
     y = np.array(y).reshape(-1, 1)
     sample_dates = pd.to_datetime(sample_dates)

@@ -1,0 +1,2 @@
+domain,model,S,train_period,test_period,MAE,baseline_MAE,t_stat,p_value
+disease,feature_decay_ridge,10,2020-01-25 to 2022-04-02,2022-04-03 to 2023-03-09,0.04502782443342462,0.04598030859273892,-3.759526799837554,0.00020034171315292082

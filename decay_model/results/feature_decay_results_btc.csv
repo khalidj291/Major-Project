@@ -1,0 +1,2 @@
+domain,model,ticker,S,train_period,test_period,MAE,baseline_MAE,t_stat,p_value
+crypto,feature_decay_ridge,BTC-USD,5,2013-10-02 to 2019-12-31,2020-01-01 to 2020-12-31,0.023039844738675323,0.02342750429977027,-2.137862403055494,0.03319166163002468

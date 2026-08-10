@@ -1,0 +1,11 @@
+{
+    "python.analysis.extraPaths": [
+        "./decay_model"
+    ],
+    "python.analysis.diagnosticSeverityOverrides": {
+        "reportAssignmentType": "none",
+        "reportAttributeAccessIssue": "none",
+        "reportCallIssue": "none",
+        "reportArgumentType": "none"
+    }
+}

@@ -34,6 +34,7 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)  # dashboard/ sits directly under pro
 sys.path.append(os.path.join(PROJECT_ROOT, "decay_model"))
 from ebbinghaus import ebbinghaus_weight
 from windowing import make_windows  # shared, tested -- see decay_model/windowing.py
+from feature_decay import apply_feature_decay  # new mechanism -- see decay_model/feature_decay.py
 
 BASELINE_MODELS_DIR = os.path.join(PROJECT_ROOT, "baseline_model", "models")
 DECAY_MODELS_DIR = os.path.join(PROJECT_ROOT, "decay_model", "models")
@@ -45,11 +46,12 @@ COLORS = {
     "Decay Fast": "#d62728",
     "Decay Medium": "#ff7f0e",
     "Decay Slow": "#1f77b4",
+    "Feature Decay": "#9467bd",
 }
 REGIME_COLORS = {"volatile": "red", "stable": "green", "neutral": "grey"}
 
 
-def _load_models(model_suffix):
+def _load_models(model_suffix, include_feature_decay=False):
     """model_suffix: '' for financial, '_consumer', or '_disease'."""
     files = {
         "Baseline": os.path.join(BASELINE_MODELS_DIR, f"model_baseline{model_suffix}.pkl"),
@@ -57,15 +59,42 @@ def _load_models(model_suffix):
         "Decay Medium": os.path.join(DECAY_MODELS_DIR, f"model_decay_medium{model_suffix}.pkl"),
         "Decay Slow": os.path.join(DECAY_MODELS_DIR, f"model_decay_slow{model_suffix}.pkl"),
     }
+    if include_feature_decay:
+        files["Feature Decay"] = os.path.join(DECAY_MODELS_DIR, f"model_feature_decay{model_suffix}.pkl")
     models = {}
     for name, path in files.items():
+        if not os.path.exists(path):
+            continue  # e.g. BTC has no Decay Fast/Medium/Slow -- only Baseline + Feature Decay exist for it
         with open(path, "rb") as f:
             models[name] = pickle.load(f)
     return models
 
 
-def _predict_all(models, X):
-    return {name: m.predict(X).flatten() for name, m in models.items()}
+def _load_models_btc():
+    """BTC only has two models -- Baseline and Feature Decay -- sample-level
+    decay was never built for this domain, so there's no Decay Fast/Medium/Slow."""
+    models = {}
+    with open(os.path.join(BASELINE_MODELS_DIR, "model_baseline_btc.pkl"), "rb") as f:
+        models["Baseline"] = pickle.load(f)
+    with open(os.path.join(DECAY_MODELS_DIR, "model_feature_decay_btc.pkl"), "rb") as f:
+        models["Feature Decay"] = pickle.load(f)
+    return models
+
+
+def _predict_one(model_entry, X, window):
+    """A plain model is a fitted Ridge -- predict directly. A feature-decay
+    model is saved as {"model":..., "S":..., "window":...} (see
+    train_feature_decay_btc.py / train_feature_decay_disease.py) because it
+    needs its input transformed with the SAME S before predicting -- it was
+    never fit on raw X."""
+    if isinstance(model_entry, dict) and "model" in model_entry:
+        X_transformed = apply_feature_decay(X, model_entry["window"], model_entry["S"])
+        return model_entry["model"].predict(X_transformed).flatten()
+    return model_entry.predict(X).flatten()
+
+
+def _predict_all(models, X, window):
+    return {name: _predict_one(m, X, window) for name, m in models.items()}
 
 
 def load_financial_domain():
@@ -79,7 +108,7 @@ def load_financial_domain():
     regimes = lookup.loc[pd.to_datetime(sample_dates), "regime"].values
 
     models = _load_models("")
-    preds = _predict_all(models, X)
+    preds = _predict_all(models, X, 30)
     return {
         "domain_label": "Financial (SPY, daily)",
         "dates": pd.to_datetime(sample_dates), "actual": y.flatten(), "preds": preds,
@@ -101,7 +130,7 @@ def load_consumer_domain():
     regimes = lookup.loc[pd.to_datetime(sample_dates), "regime"].values if has_regime_file else None
 
     models = _load_models("_consumer")
-    preds = _predict_all(models, X)
+    preds = _predict_all(models, X, 12)
     return {
         "domain_label": "Consumer (PCE, monthly)",
         "dates": pd.to_datetime(sample_dates), "actual": y.flatten(), "preds": preds,
@@ -119,10 +148,27 @@ def load_disease_domain():
     lookup = df.set_index("date")
     prices = lookup.loc[pd.to_datetime(sample_dates), "close"].values
 
-    models = _load_models("_disease")
-    preds = _predict_all(models, X)
+    models = _load_models("_disease", include_feature_decay=True)
+    preds = _predict_all(models, X, 30)
     return {
         "domain_label": "Disease (US COVID cases, daily)",
+        "dates": pd.to_datetime(sample_dates), "actual": y.flatten(), "preds": preds,
+        "prices": prices, "regimes": None, "has_regime": False,
+    }
+
+
+def load_btc_domain():
+    df = pd.read_csv(os.path.join(DATA_DIR, "data_btc.csv"), parse_dates=["date"]).sort_values("date").reset_index(drop=True)
+    # matches the test period train_baseline_btc.py / train_feature_decay_btc.py were validated on
+    X, y, sample_dates = make_windows(df, "2020-01-01", "2020-12-31", 30)
+
+    lookup = df.set_index("date")
+    prices = lookup.loc[pd.to_datetime(sample_dates), "close"].values
+
+    models = _load_models_btc()
+    preds = _predict_all(models, X, 30)
+    return {
+        "domain_label": "Crypto (BTC-USD, daily)",
         "dates": pd.to_datetime(sample_dates), "actual": y.flatten(), "preds": preds,
         "prices": prices, "regimes": None, "has_regime": False,
     }
@@ -138,8 +184,9 @@ def build_dashboard():
         "financial": load_financial_domain(),
         "consumer": load_consumer_domain(),
         "disease": load_disease_domain(),
+        "btc": load_btc_domain(),
     }
-    domain_order = ["financial", "consumer", "disease"]
+    domain_order = ["financial", "consumer", "disease", "btc"]
     state = {"domain": "financial"}
 
     plt.rcParams["font.size"] = 10
@@ -240,7 +287,7 @@ def build_dashboard():
     ax_curves.legend(fontsize=9)
     ax_curves.grid(alpha=0.3)
 
-    fig.text(0.5, 0.005, "Memory That Fades  |  Team of 3  |  Financial/Consumer: 2023-2024 test set  |  Disease: 2022-04 to 2023-03 test set",
+    fig.text(0.5, 0.005, "Memory That Fades  |  Team of 3  |  Financial/Consumer: 2023-2024 test set  |  Disease: 2022-04 to 2023-03 test set  |  BTC: 2020 test set",
               ha="center", fontsize=8, color="grey")
 
     domain_ax = fig.add_axes([0.83, 0.925, 0.14, 0.035])
@@ -264,7 +311,7 @@ if __name__ == "__main__":
     fig, _button, draw, state = build_dashboard()
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
-    for domain in ["financial", "consumer", "disease"]:
+    for domain in ["financial", "consumer", "disease", "btc"]:
         draw(domain)
         plt.savefig(os.path.join(RESULTS_DIR, f"dashboard_{domain}_view.png"), dpi=150, bbox_inches="tight")
         print(f"Saved {domain}-view screenshot.")

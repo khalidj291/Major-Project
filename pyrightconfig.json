@@ -1,0 +1,9 @@
+{
+    "extraPaths": [
+        "./decay_model"
+    ],
+    "reportAssignmentType": "none",
+    "reportAttributeAccessIssue": "none",
+    "reportCallIssue": "none",
+    "reportArgumentType": "none"
+}

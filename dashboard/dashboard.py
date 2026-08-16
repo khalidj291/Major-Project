@@ -179,6 +179,11 @@ def mae_rmse(actual, pred):
     return np.abs(err).mean(), np.sqrt((err ** 2).mean())
 
 
+MAX_MODEL_SLOTS = 5  # disease is the largest set (Baseline + Fast/Med/Slow + Feature Decay) --
+                      # every domain's bar chart reserves this many slots so bar WIDTH and
+                      # SPACING never change with domain. Fewer models just leave empty slots.
+
+
 def build_dashboard():
     domains = {
         "financial": load_financial_domain(),
@@ -191,10 +196,10 @@ def build_dashboard():
 
     plt.rcParams["font.size"] = 10
     fig = plt.figure(figsize=(15, 12), facecolor="white")
-    gs = fig.add_gridspec(3, 2, height_ratios=[1, 1, 0.7], hspace=0.55, wspace=0.28)
+    gs = fig.add_gridspec(3, 2, height_ratios=[1, 1, 0.7], hspace=0.6, wspace=0.3)
     ax_pred = fig.add_subplot(gs[0, 0])
     ax_table = fig.add_subplot(gs[0, 1])
-    ax_regime = fig.add_subplot(gs[1, 0])
+    ax_context = fig.add_subplot(gs[1, 0])
     ax_bar = fig.add_subplot(gs[1, 1])
     ax_curves = fig.add_subplot(gs[2, :])
 
@@ -204,71 +209,67 @@ def build_dashboard():
         d = domains[domain_key]
         dates, y, preds, prices = d["dates"], d["actual"], d["preds"], d["prices"]
         model_names = list(preds.keys())
+        n = len(model_names)
 
         title.set_text(f"Memory That Fades — Live Comparison Dashboard  ({d['domain_label']})")
 
+        # --- predictions vs actual ---
         ax_pred.clear()
         ax_pred.plot(dates, y, label="Actual", color="black", linewidth=1.3)
         for name in model_names:
             ax_pred.plot(dates, preds[name], label=name, color=COLORS[name], alpha=0.75, linewidth=1)
         ax_pred.set_title(f"Predictions vs Actual — {d['domain_label']}", fontsize=10)
-        ax_pred.legend(fontsize=7, loc="upper left", ncol=2)
+        # fixed legend shape every time: single column, small font, same corner -- height
+        # grows/shrinks with model count but width and position never move
+        ax_pred.legend(fontsize=6.5, loc="upper left", ncol=1, framealpha=0.9)
         ax_pred.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
         ax_pred.tick_params(axis="x", rotation=30)
 
+        # --- metrics table: fixed row height, top-anchored, so row COUNT changes total
+        # height but never squishes/stretches individual rows differently per domain ---
         ax_table.clear()
         ax_table.axis("off")
-        ax_table.set_title("Metrics Table — MAE / RMSE (real)", loc="left")
-        rows = []
-        for name in model_names:
-            mae, rmse = mae_rmse(y, preds[name])
-            rows.append([name, f"{mae:.5f}", f"{rmse:.5f}"])
-        table = ax_table.table(cellText=rows, colLabels=["Model", "MAE", "RMSE"], cellLoc="center", loc="center")
+        ax_table.set_title("Metrics Table — MAE / RMSE (real)", loc="left", fontsize=10)
+        rows = [[name, f"{mae_rmse(y, preds[name])[0]:.5f}", f"{mae_rmse(y, preds[name])[1]:.5f}"] for name in model_names]
+        row_h = 0.14  # fixed height per row, identical across every domain
+        table = ax_table.table(cellText=rows, colLabels=["Model", "MAE", "RMSE"], cellLoc="center",
+                                bbox=[0.0, 1.0 - row_h * (n + 1), 1.0, row_h * (n + 1)])
         table.auto_set_font_size(False)
         table.set_fontsize(9)
-        table.scale(1, 1.9)
 
-        ax_regime.clear()
-        ax_regime.plot(dates, prices, color="black", linewidth=1)
+        # --- context panel: price/level line, with regime shading overlaid IF this
+        # domain has it -- the plot itself is always the same shape either way ---
+        ax_context.clear()
+        ax_context.plot(dates, prices, color="black", linewidth=1)
         if d["has_regime"]:
             regimes = d["regimes"]
-            ax_regime.set_title(f"Regime Timeline — {d['domain_label']}", fontsize=10)
+            ax_context.set_title(f"Price/Level (with regime shading) — {d['domain_label']}", fontsize=10)
             for i in range(1, len(dates)):
                 c = REGIME_COLORS.get(regimes[i], "grey")
                 alpha = 0.15 if regimes[i] != "neutral" else 0.05
-                ax_regime.axvspan(dates[i - 1], dates[i], color=c, alpha=alpha)
+                ax_context.axvspan(dates[i - 1], dates[i], color=c, alpha=alpha)
         else:
-            ax_regime.set_title(f"Price/Case Level — {d['domain_label']}", fontsize=10)
-            ax_regime.text(0.02, 0.03, "(no regime labels for this domain)",
-                            transform=ax_regime.transAxes, fontsize=7.5, color="grey", style="italic")
-        ax_regime.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
-        ax_regime.tick_params(axis="x", rotation=30)
+            ax_context.set_title(f"Price/Case Level — {d['domain_label']}", fontsize=10)
+            ax_context.text(0.02, 0.03, "(no regime labels for this domain)",
+                             transform=ax_context.transAxes, fontsize=7.5, color="grey", style="italic")
+        ax_context.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+        ax_context.tick_params(axis="x", rotation=30)
 
+        # --- bar chart: ALWAYS the same chart type (overall MAE per model), ALWAYS
+        # MAX_MODEL_SLOTS-wide x-axis and fixed bar width -- 2 models (BTC) and 5
+        # models (disease) render at the identical bar width and spacing, just with
+        # unused slots left empty rather than the bars stretching to fill the panel ---
         ax_bar.clear()
-        if d["has_regime"]:
-            regimes = d["regimes"]
-            vol_mask, stab_mask = regimes == "volatile", regimes == "stable"
-            vol_maes = [mae_rmse(y[vol_mask], preds[m][vol_mask])[0] for m in model_names]
-            stab_maes = [mae_rmse(y[stab_mask], preds[m][stab_mask])[0] for m in model_names]
-            x = np.arange(len(model_names))
-            width = 0.35
-            b1 = ax_bar.bar(x - width / 2, vol_maes, width, label=f"Volatile (n={vol_mask.sum()})", color="#d62728")
-            b2 = ax_bar.bar(x + width / 2, stab_maes, width, label=f"Stable (n={stab_mask.sum()})", color="#2ca02c", alpha=0.75)
-            for bars in (b1, b2):
-                for b in bars:
-                    ax_bar.annotate(f"{b.get_height():.4f}", xy=(b.get_x() + b.get_width() / 2, b.get_height()),
-                                     xytext=(0, 2), textcoords="offset points", ha="center", fontsize=6.5)
-            ax_bar.set_title("Comparison by Regime (real)", fontsize=10)
-            ax_bar.legend(fontsize=7)
-        else:
-            overall_maes = [mae_rmse(y, preds[m])[0] for m in model_names]
-            bars = ax_bar.bar(model_names, overall_maes, color=[COLORS[m] for m in model_names], alpha=0.85)
-            for b in bars:
-                ax_bar.annotate(f"{b.get_height():.4f}", xy=(b.get_x() + b.get_width() / 2, b.get_height()),
-                                 xytext=(0, 2), textcoords="offset points", ha="center", fontsize=7)
-            ax_bar.set_title(f"Overall Comparison — {d['domain_label']}", fontsize=10)
-        ax_bar.set_xticks(range(len(model_names)))
-        ax_bar.set_xticklabels(model_names, fontsize=8)
+        overall_maes = [mae_rmse(y, preds[m])[0] for m in model_names]
+        x = np.arange(n)
+        bars = ax_bar.bar(x, overall_maes, width=0.55, color=[COLORS[m] for m in model_names], alpha=0.85)
+        for b in bars:
+            ax_bar.annotate(f"{b.get_height():.4f}", xy=(b.get_x() + b.get_width() / 2, b.get_height()),
+                             xytext=(0, 2), textcoords="offset points", ha="center", fontsize=7.5)
+        ax_bar.set_title(f"Overall Comparison — {d['domain_label']}", fontsize=10)
+        ax_bar.set_xlim(-0.5, MAX_MODEL_SLOTS - 0.5)  # fixed regardless of n -- this is the key fix
+        ax_bar.set_xticks(x)
+        ax_bar.set_xticklabels(model_names, fontsize=8, rotation=10 if n >= 4 else 0)
         ax_bar.set_ylabel("MAE")
 
         fig.canvas.draw_idle()
@@ -290,7 +291,7 @@ def build_dashboard():
     fig.text(0.5, 0.005, "Memory That Fades  |  Team of 3  |  Financial/Consumer: 2023-2024 test set  |  Disease: 2022-04 to 2023-03 test set  |  BTC: 2020 test set",
               ha="center", fontsize=8, color="grey")
 
-    domain_ax = fig.add_axes([0.83, 0.925, 0.14, 0.035])
+    domain_ax = fig.add_axes((0.83, 0.925, 0.14, 0.035))
     domain_button = Button(domain_ax, "Switch domain \u2192 Consumer", color="#cde7d8", hovercolor="#a8d5b8")
     domain_button.label.set_fontsize(9)
 
@@ -318,4 +319,5 @@ if __name__ == "__main__":
 
     draw("financial")
     print("Run with plt.show() uncommented, then click the toggle button to cycle through domains.")
+    # plt.show()
     plt.show()  # uncomment when running with a display

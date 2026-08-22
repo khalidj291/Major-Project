@@ -28,6 +28,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from matplotlib.widgets import Slider, Button
+from scipy import stats
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)  # dashboard/ sits directly under project root
@@ -247,13 +248,34 @@ def build_dashboard():
         # height but never squishes/stretches individual rows differently per domain ---
         ax_table.clear()
         ax_table.axis("off")
-        ax_table.set_title("Metrics Table — MAE / RMSE (real)", loc="left", fontsize=10)
-        rows = [[name, f"{mae_rmse(y, preds[name])[0]:.5f}", f"{mae_rmse(y, preds[name])[1]:.5f}"] for name in model_names]
+        if domain_key == "btc" and "Baseline" in preds:
+            # BTC-only: show % improvement vs baseline and p-value so the panel doesn't
+            # have to eyeball small MAE differences -- other domains' tables untouched
+            ax_table.set_title("Metrics Table — MAE / RMSE / % vs Baseline / p-value", loc="left", fontsize=10)
+            base_err_row = np.abs(y - preds["Baseline"])
+            base_mae = base_err_row.mean()
+            rows = []
+            for name in model_names:
+                err = np.abs(y - preds[name])
+                mae, rmse = mae_rmse(y, preds[name])
+                pct = 100 * (base_mae - mae) / base_mae
+                if name == "Baseline":
+                    pct_str, p_str = "—", "—"
+                else:
+                    _, p_val = stats.ttest_rel(err, base_err_row)
+                    pct_str = f"{pct:+.2f}%"
+                    p_str = f"{p_val:.4f}" + (" *" if p_val < 0.05 else "")
+                rows.append([name, f"{mae:.5f}", f"{rmse:.5f}", pct_str, p_str])
+            col_labels = ["Model", "MAE", "RMSE", "% vs Baseline", "p-value"]
+        else:
+            ax_table.set_title("Metrics Table — MAE / RMSE (real)", loc="left", fontsize=10)
+            rows = [[name, f"{mae_rmse(y, preds[name])[0]:.5f}", f"{mae_rmse(y, preds[name])[1]:.5f}"] for name in model_names]
+            col_labels = ["Model", "MAE", "RMSE"]
         row_h = 0.14  # fixed height per row, identical across every domain
-        table = ax_table.table(cellText=rows, colLabels=["Model", "MAE", "RMSE"], cellLoc="center",
+        table = ax_table.table(cellText=rows, colLabels=col_labels, cellLoc="center",
                                 bbox=[0.0, 1.0 - row_h * (n + 1), 1.0, row_h * (n + 1)])
         table.auto_set_font_size(False)
-        table.set_fontsize(9)
+        table.set_fontsize(9 if domain_key != "btc" else 8)
 
         # --- context panel: price/level line, with regime shading overlaid IF this
         # domain has it -- the plot itself is always the same shape either way ---

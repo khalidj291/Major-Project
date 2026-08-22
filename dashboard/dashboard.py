@@ -47,6 +47,8 @@ COLORS = {
     "Decay Medium": "#ff7f0e",
     "Decay Slow": "#1f77b4",
     "Feature Decay": "#9467bd",
+    "Row Decay": "#8c564b",
+    "Combined Decay": "#2ca02c",
 }
 REGIME_COLORS = {"volatile": "red", "stable": "green", "neutral": "grey"}
 
@@ -70,26 +72,22 @@ def _load_models(model_suffix, include_feature_decay=False):
     return models
 
 
-def _load_models_btc():
-    """BTC only has two models -- Baseline and Feature Decay -- sample-level
-    decay was never built for this domain, so there's no Decay Fast/Medium/Slow."""
-    models = {}
-    with open(os.path.join(BASELINE_MODELS_DIR, "model_baseline_btc.pkl"), "rb") as f:
-        models["Baseline"] = pickle.load(f)
-    with open(os.path.join(DECAY_MODELS_DIR, "model_feature_decay_btc.pkl"), "rb") as f:
-        models["Feature Decay"] = pickle.load(f)
-    return models
-
-
 def _predict_one(model_entry, X, window):
-    """A plain model is a fitted Ridge -- predict directly. A feature-decay
-    model is saved as {"model":..., "S":..., "window":...} (see
-    train_feature_decay_btc.py / train_feature_decay_disease.py) because it
-    needs its input transformed with the SAME S before predicting -- it was
-    never fit on raw X."""
+    """A plain model is a fitted Ridge -- predict directly.
+    Dict-based models come in 3 shapes (see train_feature_decay_btc.py /
+    train_row_decay_btc.py / train_combined_decay_btc.py):
+      - {"model","S","window"}            -> feature-decay: X must be transformed
+      - {"model","feature_S","row_S",...} -> combined: X transformed by feature_S only
+                                              (row_S only affected training via sample_weight)
+      - {"model","S"} only (no window)    -> row-decay: predict on raw X, no transform"""
     if isinstance(model_entry, dict) and "model" in model_entry:
-        X_transformed = apply_feature_decay(X, model_entry["window"], model_entry["S"])
-        return model_entry["model"].predict(X_transformed).flatten()
+        if "feature_S" in model_entry:
+            X_transformed = apply_feature_decay(X, model_entry["window"], model_entry["feature_S"])
+            return model_entry["model"].predict(X_transformed).flatten()
+        if "window" in model_entry:
+            X_transformed = apply_feature_decay(X, model_entry["window"], model_entry["S"])
+            return model_entry["model"].predict(X_transformed).flatten()
+        return model_entry["model"].predict(X).flatten()
     return model_entry.predict(X).flatten()
 
 
@@ -157,10 +155,30 @@ def load_disease_domain():
     }
 
 
+def _load_models_btc():
+    """BTC now has 4 models: Baseline, Feature Decay, Row Decay, and the
+    headline Combined Decay result."""
+    files = {
+        "Baseline": os.path.join(BASELINE_MODELS_DIR, "model_baseline_btc.pkl"),
+        "Row Decay": os.path.join(DECAY_MODELS_DIR, "model_row_decay_btc.pkl"),
+        "Feature Decay": os.path.join(DECAY_MODELS_DIR, "model_feature_decay_btc.pkl"),
+        "Combined Decay": os.path.join(DECAY_MODELS_DIR, "model_combined_decay_btc.pkl"),
+    }
+    models = {}
+    for name, path in files.items():
+        if not os.path.exists(path):
+            continue
+        with open(path, "rb") as f:
+            models[name] = pickle.load(f)
+    return models
+
+
 def load_btc_domain():
     df = pd.read_csv(os.path.join(DATA_DIR, "data_btc.csv"), parse_dates=["date"]).sort_values("date").reset_index(drop=True)
-    # matches the test period train_baseline_btc.py / train_feature_decay_btc.py were validated on
-    X, y, sample_dates = make_windows(df, "2020-01-01", "2020-12-31", 30)
+    # UPDATED test period -- matches the retrained models (train through 2022, val=2023).
+    # The old 2020 window is now INSIDE these models' training data -- using it here would
+    # silently leak and show fake results, so this must stay in sync with the training scripts.
+    X, y, sample_dates = make_windows(df, "2024-01-01", df["date"].max(), 30)
 
     lookup = df.set_index("date")
     prices = lookup.loc[pd.to_datetime(sample_dates), "close"].values
@@ -288,7 +306,7 @@ def build_dashboard():
     ax_curves.legend(fontsize=9)
     ax_curves.grid(alpha=0.3)
 
-    fig.text(0.5, 0.005, "Memory That Fades  |  Team of 3  |  Financial/Consumer: 2023-2024 test set  |  Disease: 2022-04 to 2023-03 test set  |  BTC: 2020 test set",
+    fig.text(0.5, 0.005, "Memory That Fades  |  Team of 3  |  Financial/Consumer: 2023-2024 test set  |  Disease: 2022-04 to 2023-03 test set  |  BTC: 2024-2026 test set",
               ha="center", fontsize=8, color="grey")
 
     domain_ax = fig.add_axes((0.83, 0.925, 0.14, 0.035))

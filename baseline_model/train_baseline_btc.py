@@ -1,13 +1,10 @@
 """
 train_baseline_btc.py -- plain Ridge baseline for BTC-USD, no weighting.
-New domain: BTC-USD didn't exist in the repo before this. Data source:
-RDeconomist/observatory (GitHub), daily close price, 2013-10-02 to 2021-01-04.
 
-Train/val/test matches the split used to validate feature-decay on this
-domain (see decay_model/train_feature_decay_btc.py): train < 2019,
-val = 2019, test = 2020. Val isn't used here since baseline has no
-hyperparameter to select -- it's included so both models are trained on
-an identical row set for a fair comparison.
+UPDATED split (was train<2019/val=2019/test=2020, now uses your full dataset
+per your guide's "increase the training dataset" instruction): train through
+2022, validate on 2023, test on 2024-2026 (untouched, ~949 days -- the
+largest, most robust test period this project has used on any domain).
 """
 import pickle
 import numpy as np
@@ -19,17 +16,17 @@ from windowing import make_windows
 
 WINDOW = 30
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "data_btc.csv")
+TRAIN_END = "2022-12-31"
+VAL_START, VAL_END = "2023-01-01", "2023-12-31"
+TEST_START = "2024-01-01"
 
 df = pd.read_csv(DATA_PATH, parse_dates=["date"])
 
-X_train, y_train, _ = make_windows(df, pd.Timestamp("2013-10-02"), pd.Timestamp("2018-12-31"), WINDOW)
-X_val, y_val, _ = make_windows(df, pd.Timestamp("2019-01-01"), pd.Timestamp("2019-12-31"), WINDOW)
-X_test, y_test, _ = make_windows(df, pd.Timestamp("2020-01-01"), pd.Timestamp("2020-12-31"), WINDOW)
+X_train, y_train, _ = make_windows(df, df["date"].min(), pd.Timestamp(TRAIN_END), WINDOW)
+X_val, y_val, _ = make_windows(df, pd.Timestamp(VAL_START), pd.Timestamp(VAL_END), WINDOW)
+X_test, y_test, _ = make_windows(df, pd.Timestamp(TEST_START), df["date"].max(), WINDOW)
 y_train, y_val, y_test = y_train.ravel(), y_val.ravel(), y_test.ravel()
 
-# train on train+val combined for the final model (matches feature-decay script's convention,
-# since val there is spent choosing S -- baseline has nothing to choose, but we keep the same
-# training rows so the comparison in statistical_significance_feature_decay_btc.py is apples-to-apples)
 X_trainval = np.vstack([X_train, X_val])
 y_trainval = np.concatenate([y_train, y_val])
 
@@ -50,7 +47,7 @@ results_dir = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(results_dir, exist_ok=True)
 pd.DataFrame([{
     "domain": "crypto", "model": "baseline_ridge", "ticker": "BTC-USD",
-    "train_period": "2013-10-02 to 2019-12-31", "test_period": "2020-01-01 to 2020-12-31",
+    "train_period": f"{df['date'].min().date()} to {VAL_END}", "test_period": f"{TEST_START} to {df['date'].max().date()}",
     "MAE": mae, "RMSE": rmse, "naive_MAE": naive_mae, "naive_RMSE": naive_rmse,
 }]).to_csv(os.path.join(results_dir, "baseline_results_btc.csv"), index=False)
 

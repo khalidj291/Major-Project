@@ -1,0 +1,2 @@
+domain,model,ticker,feature_S,row_S,train_period,test_period,MAE,baseline_MAE,pct_improvement,t_stat,p_value
+crypto,combined_decay_ridge,BTC-USD,5,365,2014-09-18 to 2023-12-31,2024-01-01 to 2026-08-06,0.017789265736087318,0.018033217626454757,1.352791805770485,-3.239434764293324,0.001239321761861744

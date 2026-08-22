@@ -1,9 +1,8 @@
 """
-train_feature_decay_btc.py -- feature-level decay for BTC-USD.
-
-UPDATED split: train through 2022, validate on 2023 (S chosen here only),
-test on 2024-2026 (untouched until the single final check). This is the
-current best-validated single-mechanism result for BTC.
+train_row_decay_btc.py -- your ORIGINAL mechanism (decay whole training days
+by age, ebbinghaus.py), applied to BTC for the first time as its own script.
+Built for completeness -- feature_decay alone and this combined together
+is train_combined_decay_btc.py, the actual best BTC result.
 """
 import pickle
 import numpy as np
@@ -13,26 +12,28 @@ from scipy import stats
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from windowing import make_windows
-from feature_decay import apply_feature_decay
+from ebbinghaus import apply_decay_weights
 
 WINDOW = 30
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "data_btc.csv")
-S_CANDIDATES = [5, 10, 15, 20, 30, 60]
+S_CANDIDATES = [90, 180, 365, 730]
 TRAIN_END = "2022-12-31"
 VAL_START, VAL_END = "2023-01-01", "2023-12-31"
 TEST_START = "2024-01-01"
 
 df = pd.read_csv(DATA_PATH, parse_dates=["date"])
 
-X_train, y_train, _ = make_windows(df, df["date"].min(), pd.Timestamp(TRAIN_END), WINDOW)
-X_val, y_val, _ = make_windows(df, pd.Timestamp(VAL_START), pd.Timestamp(VAL_END), WINDOW)
+X_train, y_train, tr_dates = make_windows(df, df["date"].min(), pd.Timestamp(TRAIN_END), WINDOW)
+X_val, y_val, val_dates = make_windows(df, pd.Timestamp(VAL_START), pd.Timestamp(VAL_END), WINDOW)
 X_test, y_test, _ = make_windows(df, pd.Timestamp(TEST_START), df["date"].max(), WINDOW)
 y_train, y_val, y_test = y_train.ravel(), y_val.ravel(), y_test.ravel()
 
 print("Selecting S on VALIDATION (2023) only:")
+ref_date = pd.Timestamp(VAL_END)
 best_S, best_val_mae = None, np.inf
 for S in S_CANDIDATES:
-    pred = Ridge(alpha=1.0).fit(apply_feature_decay(X_train, WINDOW, S), y_train).predict(apply_feature_decay(X_val, WINDOW, S))
+    w = apply_decay_weights(pd.to_datetime(tr_dates), ref_date, S)
+    pred = Ridge(alpha=1.0).fit(X_train, y_train, sample_weight=w).predict(X_val)
     mae = np.abs(y_val - pred).mean()
     if mae < best_val_mae:
         best_val_mae, best_S = mae, S
@@ -41,11 +42,11 @@ print(f"-> S={best_S} selected\n")
 
 X_trainval = np.vstack([X_train, X_val])
 y_trainval = np.concatenate([y_train, y_val])
-X_trainval_decayed = apply_feature_decay(X_trainval, WINDOW, best_S)
-X_test_decayed = apply_feature_decay(X_test, WINDOW, best_S)
+trainval_dates = list(tr_dates) + list(val_dates)
+w_trainval = apply_decay_weights(pd.to_datetime(trainval_dates), ref_date, best_S)
 
-model = Ridge(alpha=1.0).fit(X_trainval_decayed, y_trainval)
-pred = model.predict(X_test_decayed)
+model = Ridge(alpha=1.0).fit(X_trainval, y_trainval, sample_weight=w_trainval)
+pred = model.predict(X_test)
 
 with open(os.path.join(os.path.dirname(__file__), "..", "baseline_model", "models", "model_baseline_btc.pkl"), "rb") as f:
     baseline_model = pickle.load(f)
@@ -57,18 +58,18 @@ t_stat, p_val = stats.ttest_rel(decay_err, base_err)
 
 out_dir = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(out_dir, exist_ok=True)
-with open(os.path.join(out_dir, "model_feature_decay_btc.pkl"), "wb") as f:
-    pickle.dump({"model": model, "S": best_S, "window": WINDOW}, f)
+with open(os.path.join(out_dir, "model_row_decay_btc.pkl"), "wb") as f:
+    pickle.dump({"model": model, "S": best_S}, f)
 
 results_dir = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(results_dir, exist_ok=True)
 pd.DataFrame([{
-    "domain": "crypto", "model": "feature_decay_ridge", "ticker": "BTC-USD", "S": best_S,
+    "domain": "crypto", "model": "row_decay_ridge", "ticker": "BTC-USD", "S": best_S,
     "train_period": f"{df['date'].min().date()} to {VAL_END}", "test_period": f"{TEST_START} to {df['date'].max().date()}",
     "MAE": decay_err.mean(), "baseline_MAE": base_err.mean(),
     "t_stat": t_stat, "p_value": p_val,
-}]).to_csv(os.path.join(results_dir, "feature_decay_results_btc.csv"), index=False)
+}]).to_csv(os.path.join(results_dir, "row_decay_results_btc.csv"), index=False)
 
-print(f"baseline MAE      : {base_err.mean():.6f}")
-print(f"feature-decay MAE : {decay_err.mean():.6f}  (S={best_S})")
-print(f"paired t-test     : t={t_stat:.4f}, p={p_val:.4f}")
+print(f"baseline MAE  : {base_err.mean():.6f}")
+print(f"row-decay MAE : {decay_err.mean():.6f}  (S={best_S})")
+print(f"paired t-test : t={t_stat:.4f}, p={p_val:.4f}")

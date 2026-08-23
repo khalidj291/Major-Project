@@ -1,10 +1,6 @@
 """
-walk_forward_validation_btc.py -- same as the original repo version, with one
-addition: also saves per-day paired (baseline_err, selected_err, date) rows,
-not just the per-window summary. The per-day file is what the block
-bootstrap significance test (block_bootstrap_significance.py) consumes --
-the original paired t-test only needs means, but a block bootstrap needs the
-actual daily error sequence to resample in contiguous chunks.
+walk_forward_validation_eth.py -- same as before, with per-day paired error
+logging added (see walk_forward_validation_btc.py docstring for why).
 """
 import numpy as np
 import pandas as pd
@@ -17,7 +13,7 @@ from powerlaw_decay import powerlaw_weights
 from ebbinghaus import ebbinghaus_weight
 
 WINDOW = 30
-DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "data_btc.csv")
+DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "data_eth.csv")
 
 ALPHA_CANDIDATES = [0.5, 1.0, 2.0, 3.0]
 S_FEAT_CANDIDATES = [30, 90, 180]
@@ -29,13 +25,12 @@ def exp_feat_weights(window, S):
 
 df = pd.read_csv(DATA_PATH, parse_dates=["date"])
 df = df.sort_values("date").reset_index(drop=True)
-if "ticker" in df.columns:
-    df = df[df["ticker"] == "BTC-USD"].reset_index(drop=True)
+assert "ticker" not in df.columns, "unexpected ticker column in data_eth.csv"
 
 test_starts = pd.date_range("2020-01-01", "2026-01-01", freq="6MS")
 
 results = []
-per_day_rows = []  # date, window_start, baseline_err, selected_err
+per_day_rows = []
 
 for ts in test_starts:
     test_start = ts
@@ -112,10 +107,10 @@ for ts in test_starts:
 res_df = pd.DataFrame(results)
 results_dir = os.path.join(os.path.dirname(__file__), "results")
 os.makedirs(results_dir, exist_ok=True)
-res_df.to_csv(os.path.join(results_dir, "walk_forward_results_btc.csv"), index=False)
+res_df.to_csv(os.path.join(results_dir, "walk_forward_results_eth.csv"), index=False)
 
 per_day_df = pd.DataFrame(per_day_rows)
-per_day_df.to_csv(os.path.join(results_dir, "walk_forward_per_day_btc.csv"), index=False)
+per_day_df.to_csv(os.path.join(results_dir, "walk_forward_per_day_eth.csv"), index=False)
 
 all_baseline_errs = per_day_df["baseline_err"].values
 all_selected_errs = per_day_df["selected_err"].values
@@ -127,5 +122,5 @@ print(f"Pooled across {len(all_selected_errs)} test days from every window:")
 print(f"  mean baseline error : {np.mean(all_baseline_errs):.6f}")
 print(f"  mean selected error : {np.mean(all_selected_errs):.6f}")
 print(f"  paired t-test        : t={t_stat:.4f}, p={p_val:.4f}")
-print(f"\nSaved decay_model/results/walk_forward_results_btc.csv")
-print(f"Saved decay_model/results/walk_forward_per_day_btc.csv ({len(per_day_df)} rows)")
+print(f"\nSaved decay_model/results/walk_forward_results_eth.csv")
+print(f"Saved decay_model/results/walk_forward_per_day_eth.csv ({len(per_day_df)} rows)")

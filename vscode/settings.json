@@ -6,6 +6,7 @@
         "reportAssignmentType": "none",
         "reportAttributeAccessIssue": "none",
         "reportCallIssue": "none",
-        "reportArgumentType": "none"
+        "reportArgumentType": "none",
+        "reportOperatorIssue": "none"
     }
 }

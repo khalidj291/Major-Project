@@ -186,11 +186,47 @@ def load_btc_domain():
 
     models = _load_models_btc()
     preds = _predict_all(models, X, 30)
+
+    robustness = _load_btc_robustness()
+
     return {
         "domain_label": "Crypto (BTC-USD, daily)",
         "dates": pd.to_datetime(sample_dates), "actual": y.flatten(), "preds": preds,
         "prices": prices, "regimes": None, "has_regime": False,
+        "robustness": robustness,
     }
+
+
+def _load_btc_robustness():
+    """Pulls the results of every independent robustness check run on BTC --
+    walk-forward validation, and comparisons against 3 established techniques
+    (MA crossover, GARCH, RSI). Reads whatever result CSVs exist; skips any
+    that haven't been run yet rather than failing the whole dashboard."""
+    rows = []
+    decay_results_dir = os.path.join(PROJECT_ROOT, "decay_model", "results")
+    try:
+        wf = pd.read_csv(os.path.join(decay_results_dir, "walk_forward_summary_btc.csv")).iloc[0]
+        rows.append(("Walk-forward (13 windows, 2020-2026)", f"{int(wf.windows_won)}/{int(wf.n_windows)} won", f"p={wf.p_value:.4f}"))
+    except Exception:
+        pass
+    try:
+        ma = pd.read_csv(os.path.join(decay_results_dir, "ma_comparison_per_day_btc.csv"))
+        from scipy import stats as _stats
+        _, ma_p = _stats.ttest_rel(ma["selected_err"], ma["ma_linear_err"])
+        rows.append(("vs MA crossover (20/50-day)", "tied", f"p={ma_p:.4f}"))
+    except Exception:
+        pass
+    try:
+        g = pd.read_csv(os.path.join(decay_results_dir, "garch_comparison_summary_btc.csv")).iloc[0]
+        rows.append(("vs GARCH(1,1)+AR(1)", "tied", f"p={g.selected_vs_garch_p:.4f}"))
+    except Exception:
+        pass
+    try:
+        r = pd.read_csv(os.path.join(decay_results_dir, "rsi_comparison_btc.csv")).iloc[0]
+        rows.append(("vs RSI(14)", "tied", f"p={r.mae_p:.4f}"))
+    except Exception:
+        pass
+    return rows
 
 
 def mae_rmse(actual, pred):
@@ -312,21 +348,35 @@ def build_dashboard():
         ax_bar.set_xticklabels(model_names, fontsize=8, rotation=10 if n >= 4 else 0)
         ax_bar.set_ylabel("MAE")
 
-        fig.canvas.draw_idle()
+        # --- bottom panel: BTC gets a robustness summary (walk-forward + established-
+        # technique comparisons), every other domain keeps the Ebbinghaus curves exactly
+        # as before -- only BTC has this extra evidence, so only BTC's panel changes ---
+        ax_curves.clear()
+        if domain_key == "btc" and d.get("robustness"):
+            ax_curves.axis("off")
+            ax_curves.set_title("BTC Robustness Checks — independent validations beyond the single test split", loc="left", fontsize=10)
+            rows = d["robustness"]
+            row_h = 0.16
+            table = ax_curves.table(cellText=rows, colLabels=["Check", "Result", "Significance"], cellLoc="center",
+                                     bbox=[0.0, 1.0 - row_h * (len(rows) + 1), 1.0, row_h * (len(rows) + 1)])
+            table.auto_set_font_size(False)
+            table.set_fontsize(9)
+        else:
+            reference_date = pd.Timestamp("2022-12-31")
+            days_ago = np.arange(0, 1500)
+            curve_dates = [reference_date - pd.Timedelta(days=int(dd)) for dd in days_ago]
+            for label, S, color in [("Fast decay (S=30)", 30, "#d62728"),
+                                     ("Medium decay (S=180)", 180, "#ff7f0e"),
+                                     ("Slow decay (S=365)", 365, "#1f77b4")]:
+                weights = [ebbinghaus_weight(dd, reference_date, S) for dd in curve_dates]
+                ax_curves.plot(days_ago, weights, label=label, color=color, linewidth=2)
+            ax_curves.set_xlabel("Days ago")
+            ax_curves.set_ylabel("Weight (retention)")
+            ax_curves.set_title("Ebbinghaus Forgetting Curves — Sample Weight vs Data Age")
+            ax_curves.legend(fontsize=9)
+            ax_curves.grid(alpha=0.3)
 
-    reference_date = pd.Timestamp("2022-12-31")
-    days_ago = np.arange(0, 1500)
-    curve_dates = [reference_date - pd.Timedelta(days=int(dd)) for dd in days_ago]
-    for label, S, color in [("Fast decay (S=30)", 30, "#d62728"),
-                             ("Medium decay (S=180)", 180, "#ff7f0e"),
-                             ("Slow decay (S=365)", 365, "#1f77b4")]:
-        weights = [ebbinghaus_weight(dd, reference_date, S) for dd in curve_dates]
-        ax_curves.plot(days_ago, weights, label=label, color=color, linewidth=2)
-    ax_curves.set_xlabel("Days ago")
-    ax_curves.set_ylabel("Weight (retention)")
-    ax_curves.set_title("Ebbinghaus Forgetting Curves — Sample Weight vs Data Age")
-    ax_curves.legend(fontsize=9)
-    ax_curves.grid(alpha=0.3)
+        fig.canvas.draw_idle()
 
     fig.text(0.5, 0.005, "Memory That Fades  |  Team of 3  |  Financial/Consumer: 2023-2024 test set  |  Disease: 2022-04 to 2023-03 test set  |  BTC: 2024-2026 test set",
               ha="center", fontsize=8, color="grey")

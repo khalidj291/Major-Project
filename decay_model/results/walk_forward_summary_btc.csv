@@ -1,0 +1,2 @@
+n_windows,windows_won,win_rate,n_pooled_test_days,mean_baseline_MAE,mean_selected_MAE,pct_improvement,t_stat,p_value
+13,10,0.7692307692307693,2373,0.021333942325827568,0.02114421420213486,0.8893251926673577,-2.659038850082021,0.007889077660362556

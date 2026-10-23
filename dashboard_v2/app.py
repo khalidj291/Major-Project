@@ -37,23 +37,24 @@ st.set_page_config(
 
 
 def main():
-    # Sidebar Header & Theme Toggle
+    # Initialize and toggle dark mode first so CSS is applied early
+    dark_mode = st.sidebar.toggle("🌙 Dark Mode", value=False)
+    inject_custom_css(dark_mode=dark_mode)
+
+    # Sidebar Header
     st.sidebar.markdown(
         """
-        <div style="padding: 10px 0 16px 0; border-bottom: 1px solid #E0E0E0; margin-bottom: 15px;">
-            <div style="font-family: 'Newsreader', Georgia, serif; font-size: 1.25rem; font-weight: 700; color: #14213D;">
+        <div style="padding: 10px 0 16px 0; border-bottom: 1px solid var(--border-color, #E0E0E0); margin-bottom: 15px;">
+            <div class="sidebar-header-title">
                 Memory That Fades
             </div>
-            <div style="font-size: 0.8rem; color: #5C677D; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px;">
+            <div class="sidebar-header-sub">
                 Results & Integrity Dashboard
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    dark_mode = st.sidebar.toggle("🌙 Dark Mode", value=False)
-    inject_custom_css(dark_mode=dark_mode)
 
     # Sidebar Navigation
     pages = [
@@ -74,7 +75,7 @@ def main():
     st.sidebar.markdown("---")
     st.sidebar.markdown(
         """
-        <div style="font-size: 0.8rem; color: #7F8C8D; line-height: 1.5;">
+        <div class="text-muted" style="font-size: 0.8rem; line-height: 1.5;">
             <strong>Research Standard:</strong><br>
             • Real experiment data only<br>
             • Negative results highlighted<br>

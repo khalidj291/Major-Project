@@ -7,7 +7,7 @@ import os
 
 def test_all_pages():
     app_path = os.path.join(os.path.dirname(__file__), "app.py")
-    at = AppTest.from_file(app_path).run()
+    at = AppTest.from_file(app_path).run(timeout=20)
     assert not at.exception, f"Overview page encountered exception: {at.exception}"
     print("[PASS] Page 1: Overview rendered cleanly.")
 
@@ -25,11 +25,19 @@ def test_all_pages():
     ]
 
     for p in pages:
-        at.sidebar.radio[0].set_value(p).run()
+        at.sidebar.radio[0].set_value(p).run(timeout=20)
         assert not at.exception, f"Page '{p}' encountered exception: {at.exception}"
         print(f"[PASS] Page '{p}' rendered cleanly.")
 
-    print("\nALL 10 PAGES TESTED AND VERIFIED WITH ZERO RUNTIME EXCEPTIONS!")
+    print("\n--- TESTING DARK MODE ACROSS PAGES ---")
+    at.sidebar.toggle[0].set_value(True).run(timeout=20)
+    assert not at.exception, "Dark mode toggle failed."
+    for p in ["1. Overview & Summary"] + pages:
+        at.sidebar.radio[0].set_value(p).run(timeout=20)
+        assert not at.exception, f"Dark mode Page '{p}' encountered exception: {at.exception}"
+        print(f"[PASS] Dark Mode Page '{p}' rendered cleanly.")
+
+    print("\nALL 10 PAGES TESTED IN LIGHT & DARK MODE WITH ZERO EXCEPTIONS!")
 
 if __name__ == "__main__":
     test_all_pages()

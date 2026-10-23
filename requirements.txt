@@ -6,3 +6,5 @@ scipy>=1.11,<1.15
 seaborn>=0.13,<0.14
 torch>=2.2
 yfinance>=0.2
+streamlit>=1.30.0
+plotly>=5.20.0

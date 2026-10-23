@@ -95,7 +95,8 @@ def launch_dashboard():
     if os.path.exists("dashboard/dashboard.py"):
         print("\nLaunching dashboard...")
         import subprocess
-        subprocess.run(["python", "dashboard/dashboard.py"])
+        import sys
+        subprocess.run([sys.executable, "dashboard/dashboard.py"])
     else:
         print("\n[MISSING] dashboard/dashboard.py not built yet -- skipping launch")
 
